@@ -1,0 +1,215 @@
+NAME
+    Config::LDAP - Read LDAP attribute and object class configurations
+
+SYNOPSIS
+     use Config::LDAP;
+
+     my $ldapc = new Config::LDAP(
+             type => 'rfc2252',
+         );
+
+     $ldapc -> file('/usr/local/etc/openldap/slapd.oc.conf');
+     $ldapc -> file('/usr/local/etc/openldap/slapd.at.conf');
+
+     my @objectclasses = $ldapc -> query_objectclass_names();
+     my @attributes    = $ldapc -> query_attribute_names();
+
+DESCRIPTION
+    Config::LDAP is designed to read LDAP attribute and object class
+    configuration files in several different formats by allowing for new
+    grammers to be defined.
+
+    This module requires Parse::RecDescent.
+
+METHODS
+    new(%args)
+        This creates a new configuration object. Valid arguments include
+        "file" and "type", though these are optional.
+
+        If "file" is specified, the named file will be loaded. If "type" is
+        specified (either a SCALAR or ARRAY REF), then the specified
+        grammers will be tried in the order given. Otherwise, all available
+        grammers are tried.
+
+    file($filename)
+        This will load the file specified. If a file has already been loaded
+        or the type has been specified, then the file is expected to be of
+        the same type.
+
+        Loading multiple files merges the content and does not replace
+        information unless an object class or attribute type is redefined.
+        The later definition will replace the earlier definition.
+
+    query_objectclass_oids
+        This will return a list of oids representing the object classes
+        defined by the configuration.
+
+    query_attribute_oids
+        This will return a list of oids representing the attribute types
+        defined by the configuration.
+
+    query_objectclass_names
+        This will return a list of names representing the object classes
+        defined by the configuration. Object classes are not required to
+        have names.
+
+    query_attribute_names
+        This will return a list of names representing the attribute types
+        defined by the configuration. Attribute types are not required to
+        have names.
+
+    query_objectclass
+        This will return a hash with all the information available for the
+        given object class. The argument may be either an oid or a name.
+
+    query_attribute
+        This will return a hash with all the information available for the
+        given attribute type. The argument may be either an oid or a name.
+
+    query_grammer
+        This will return the name of the grammer that successfully parsed
+        the configuration file.
+
+AVAILABLE GRAMMERS
+    The following grammers are defined in some fashion. If no "type" is
+    specified before loading a file, all available grammers will be tried
+    until one parses the file successfully. Afterwards, all files being
+    added to the configuration object will be expected to be in the same
+    format.
+
+    rfc2252
+        This format is defined in RFC 2252 - Lightweight Directory Access
+        Protocol (v3): Attribute Syntax Definitions. The grammer only
+        supports attribute type and object class definitions at this time.
+
+ADDING GRAMMERS
+    Additional grammers may be used by assigning the BNF (as needed for
+    "Parse::RecDescent") in the global "%Config::LDAP::grammers".
+
+        $Config::LDAP::grammers{$grammer} -> {pre} = sub { ... };
+        $Config::LDAP::grammers{$grammer} -> {grammer} = q{ ... };
+        $Config::LDAP::grammers{$grammer} -> {post} = sub { ... };
+
+    The top rule for the grammer must be "Schema". The "pre" and "post"
+    subroutines are only called if they are defined. The "pre" subroutine is
+    passed a copy of the file and should return the processed string. The
+    "post" subroutine is passed the product of the parse and should return
+    an array reference of hashes with the following keys.
+
+    It is also recommended that you look at the source for this module to
+    see how the included grammers are implemented.
+
+  Attribute Types
+
+    Most of the information expected in the hashes is described in RFC 2252.
+
+    _type
+        This should be set to `attributetype' to indicate that this is
+        describing an attribute type.
+
+    collective
+        The attribute type is not collective by default. Set this to true to
+        make the attribute type collective.
+
+    desc
+        This is a string describing the attribute type.
+
+    equality
+        This is the "oid" or "name" of the rule governing matching for the
+        attribute type.
+
+    name
+        This is the name commonly used in lieu of the oid for the attribute
+        type.
+
+    no-user-modification
+        The attribute type defaults to user modifiable. Set this to true to
+        disallow user modification.
+
+    obsolete
+        Set this to true to mark the attribute type as obsolete. Does not
+        affect functionality but is for informational purposes only.
+
+    oid The attribute type identifier.
+
+    ordering
+        This is the "oid" or "name" of the rule governing ordering for the
+        attribute type.
+
+    short-forms
+        This is a list of strings that are considered aliases for the
+        "name".
+
+    single-value
+        The attribute type is multi-valued by default. Set this to true to
+        restrict the attribute type to being single-valued.
+
+    substr
+        This is the oid of the rule governing substring matching.
+
+    sup This is the "oid" or "name" of the parent attribute type from which
+        this attribute type is derived.
+
+    syntax
+    usage
+  Object Classes
+
+    _type
+        This should be set to `objectclass' to indicate that this is
+        describing an object class.
+
+    abstract
+        The object class is "structural" by default. Set this to true (and
+        "structural" and "auxiliary" to false) to make this an abstract
+        object class.
+
+    auxiliary
+        The object class is "structural" by default. Set this to true (and
+        "structural" and "abstract" to false) to make this an auxiliary
+        object class.
+
+    desc
+    may This is a list of attribute types that MAY be in an object of this
+        object class.
+
+    must
+        This is a list of attribute types that MUST be in an object of this
+        object class.
+
+    name
+    obsolete
+    oid The object class identifier.
+
+    sup This is a list of "oid"s and/or "name"s of parent object classes
+        from which this object class is derived.
+
+    structural
+        The object class is "structural" by default. As long as "abstract"
+        and "auxiliary" are false, the class will remain structural.
+
+BUGS
+    Known to abound, but please let the author know of any really nasty
+    ones. This is an alpha release, which means it works on some input but
+    might not on other. This module is under development and the grammers
+    will become more complete over the next few versions.
+
+    Fortunately, this module does not modify anything in the filesystem.
+
+  RFC2522 Grammer
+
+    Terms whose identifier begins with `X-' are not supported. These are for
+    private experimental use anyway. Support should not be expected any time
+    soon for these terms.
+
+SEE ALSO
+    the Parse::RecDescent manpage, RFC 2252.
+
+AUTHOR
+    James Smith <jgsmith@jamesmith.com>
+
+COPYRIGHT
+    Copyright (C) 2001 Texas A&M University. All Rights Reserved.
+
+    This module is free software; you can redistribute it and/or modify it
+    under the same terms as Perl itself.
+
